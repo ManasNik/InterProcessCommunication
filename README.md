@@ -5,6 +5,8 @@ This is a simple Linux system-level program written in C to experiment with inte
 
 Sensor data is generated at ~100 Hz, processed in another process, and prepared for periodic upload while handling slow or blocking operations.
 
+This project was implemented while I was learning Linux system programming for the first time, with the primary focus on understanding core concepts such as IPC, processes, threading, and buffering.
+
 ## Design
 - Two Linux processes are used:
   - **SensorProcess** generates sensor data and sends it via a named pipe (FIFO).
