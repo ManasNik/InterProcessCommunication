@@ -1,78 +1,29 @@
-IPC-based Sensor Data Processing Pipeline
-Overview
+# IPC-based Sensor Data Pipeline
 
-This project is a simple system-level exercise implemented in C on Linux to demonstrate inter-process communication, basic multithreading, and buffering under unreliable upload conditions.
+## Overview
+This is a simple Linux system-level program written in C to experiment with inter-process communication, multithreading, and buffering.
 
-The goal was to receive sensor data at a fixed rate, process it, and prepare it for periodic IoT upload while ensuring data is not lost even if uploads are slow or blocking.
+Sensor data is generated at ~100 Hz, processed in another process, and prepared for periodic upload while handling slow or blocking operations.
 
-Architecture
+## Design
+- Two Linux processes are used:
+  - **SensorProcess** generates sensor data and sends it via a named pipe (FIFO).
+  - **DistanceCalcProcess** reads data from the FIFO and processes it.
+- A **separate upload thread** is created inside the consumer process to isolate slow upload behavior from continuous data reception.
+- Sensor samples are grouped into **1-second chunks (100 samples)**.
+- A **circular queue of chunks** is used between the main thread and the upload thread.
 
-The system consists of two Linux processes:
+## Buffering
+- Sensor rate: 100 samples/second  
+- Worst-case upload delay: ~10 seconds  
+- Buffer size: **20 chunks** (10 required + headroom)
 
-SensorProcess
+This allows data ingestion to continue even when uploads are delayed.
 
-Simulates sensor data generation at ~100 Hz
-
-Sends data to another process using a named pipe (FIFO)
-
-DistanceCalcProcess
-
-Reads sensor data continuously from the FIFO
-
-Groups samples into fixed 1-second chunks (100 samples)
-
-Uses a circular queue to pass chunks to a separate upload thread
-
-Inside the consumer process, a dedicated upload thread is created so that slow or blocking upload operations do not affect continuous data ingestion.
-
-IPC Mechanism
-
-A named pipe (FIFO) is used for inter-process communication.
-
-FIFO is created at runtime using:
-
-mkfifo IPC
-
-
-The FIFO file itself is not tracked in version control.
-
-Buffering Strategy
-
-Sensor rate: 100 samples per second
-
-Data is grouped into 1-second chunks (100 samples per chunk)
-
-Worst-case upload delay assumed: 10 seconds
-
-This results in 10 chunks being queued in the worst case
-
-Circular queue size is set to 20 chunks to provide headroom for delays and retries
-
-This allows continuous data reception even when uploads are slow.
-
-Current Status / Limitations
-
-Circular queue and upload thread logic are implemented in a basic form
-
-Mutex protection, retry logic, and disk persistence are not fully implemented due to time constraints
-
-Upload behavior is simulated and intended to represent blocking IoT communication
-
-Learning Context
-
-I am new to Linux system programming and learned POSIX IPC, processes, threads, and basic buffering concepts very recently. This implementation reflects my understanding so far and focuses on clear architecture and correct separation of concerns rather than production-level completeness.
-
-How to Run
-
-Create the FIFO:
-
-mkfifo IPC
-
-
-Compile both programs:
-
-gcc SensorProcess.c -o SensorProcess
-gcc DistanceCalcProcess.c -o DistanceCalcProcess -lpthread
-
-
-Run DistanceCalcProcess first, then SensorProcess.
+## IPC
+- Inter-process communication is implemented using a **named pipe (FIFO)**.
+- The FIFO is created at runtime using:
+  ```bash
+  mkfifo IPC
+  gcc SensorProcess.c -o SensorProcess
+  gcc DistanceCalcProcess.c -o DistanceCalcProcess -lpthread
